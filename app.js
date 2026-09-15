@@ -1,5 +1,5 @@
 /* =====================================================
-   MAÇ KUPONLARI - APP.JS (Full Featured)
+   MAÇ KUPONLARI - APP.JS (Full Featured - No SW)
 ===================================================== */
 
 "use strict";
@@ -32,7 +32,10 @@ const I18N = {
         countdownLabel: "⏱️ KALAN SÜRE", started: "🔴 Başladı",
         detail: "Maç Detayı", share: "Paylaş", close: "Kapat",
         copied: "Bağlantı kopyalandı!",
-        noShare: "Paylaşım desteklenmiyor."
+        noShare: "Paylaşım desteklenmiyor.",
+        lastUpdate: "Son güncelleme",
+        favAdd: "☆ Favorilere Ekle", favRemove: "★ Favorilerden Çıkar",
+        loading: "Kuponlar hazırlanıyor..."
     },
     en: {
         title: "MATCH COUPONS", subtitle: "FREE MATCH PREDICTIONS",
@@ -60,7 +63,10 @@ const I18N = {
         countdownLabel: "⏱️ TIME LEFT", started: "🔴 Started",
         detail: "Match Detail", share: "Share", close: "Close",
         copied: "Link copied!",
-        noShare: "Sharing not supported."
+        noShare: "Sharing not supported.",
+        lastUpdate: "Last update",
+        favAdd: "☆ Add to Favorites", favRemove: "★ Remove from Favorites",
+        loading: "Coupons are loading..."
     }
 };
 
@@ -151,7 +157,6 @@ function applyTranslations() {
     document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
         el.placeholder = t(el.dataset.i18nPlaceholder);
     });
-    // Select option'ları
     document.querySelectorAll("#leagueSelect option[data-i18n]").forEach(el => {
         el.textContent = t(el.dataset.i18n);
     });
@@ -175,7 +180,8 @@ function saveFavorites() {
 }
 function toggleFavorite(id) {
     if (!id) return;
-    favorites.has(id) ? favorites.delete(id) : favorites.add(id);
+    if (favorites.has(id)) favorites.delete(id);
+    else favorites.add(id);
     saveFavorites();
     updateFavCount();
     applyFilters();
@@ -228,8 +234,7 @@ function confidenceStars(v) {
 }
 function cardConfClass(p) {
     const c = getConfidence(p);
-    if (isBanko(p)) return "conf-banko";
-    if (c >= 85) return "conf-banko";
+    if (isBanko(p) || c >= 85) return "conf-banko";
     if (c >= 75) return "conf-high";
     if (c >= 60) return "conf-mid";
     return "conf-low";
@@ -243,9 +248,9 @@ function formatToday() {
 /* ========== GERİ SAYIM ========== */
 function getCountdown(kickoff) {
     if (!kickoff) return "";
-    const t = new Date(kickoff).getTime();
-    if (isNaN(t)) return "";
-    const diff = t - Date.now();
+    const tm = new Date(kickoff).getTime();
+    if (isNaN(tm)) return "";
+    const diff = tm - Date.now();
     if (diff <= 0) return t("started");
     const totalMin = Math.floor(diff / 60000);
     const hours = Math.floor(totalMin / 60);
@@ -359,7 +364,7 @@ function createCard(p) {
             </div>
             <div class="info-box">
                 <span class="info-label">ORAN</span>
-                <span class="info-value odds">${escapeHtml(oran)}</span>
+                <span class="info-value odds">${escapeHtml(String(oran))}</span>
             </div>
         </div>
 
@@ -372,17 +377,14 @@ function createCard(p) {
         </div>
     `;
 
-    // Fav
     card.querySelector(".fav-btn").addEventListener("click", e => {
         e.stopPropagation();
         toggleFavorite(id);
     });
-    // Share
     card.querySelector(".share-btn").addEventListener("click", e => {
         e.stopPropagation();
         sharePick(p);
     });
-    // Detail modal
     card.addEventListener("click", () => openDetail(p));
 
     return card;
@@ -391,7 +393,6 @@ function createCard(p) {
 /* ========== MODAL ========== */
 function openDetail(p) {
     const conf = getConfidence(p);
-    const status = statusInfo(p.status);
     const homeLogo = p.homeLogo ? `<img src="${escapeHtml(p.homeLogo)}" class="modal-team-logo" onerror="this.style.display='none'">` : "";
     const awayLogo = p.awayLogo ? `<img src="${escapeHtml(p.awayLogo)}" class="modal-team-logo" onerror="this.style.display='none'">` : "";
     const id = getPickId(p);
@@ -427,7 +428,7 @@ function openDetail(p) {
         ${p.analysis ? `<div class="modal-analysis">${escapeHtml(p.analysis)}</div>` : ""}
         <div class="modal-actions">
             <button class="modal-action-btn" id="modalFavBtn">
-                ${isFav ? "★ Favorilerden Çıkar" : "☆ Favorilere Ekle"}
+                ${isFav ? t("favRemove") : t("favAdd")}
             </button>
             <button class="modal-action-btn" id="modalShareBtn">
                 📤 ${t("share")}
@@ -437,7 +438,7 @@ function openDetail(p) {
 
     $("modalFavBtn").addEventListener("click", () => {
         toggleFavorite(id);
-        openDetail(p); // yenile
+        openDetail(p);
     });
     $("modalShareBtn").addEventListener("click", () => sharePick(p));
 
@@ -456,16 +457,13 @@ function applyFilters() {
     filteredPicks = allPicks.filter(p => {
         const id = getPickId(p);
 
-        // Kategori filtresi
         if (activeFilter === "banko" && !isBanko(p)) return false;
         if (activeFilter === "high" && getConfidence(p) < 75) return false;
         if (activeFilter === "today" && p.today === false) return false;
         if (activeFilter === "favorites" && !favorites.has(id)) return false;
 
-        // Lig filtresi
-        if (leagueFilter !== "all" && normalize(p.league) !== leagueFilter) return false;
+        if (leagueFilter !== "all" && normalize(p.league) !== normalize(leagueFilter)) return false;
 
-        // Saat filtresi
         if (timeFilter !== "all") {
             const h = parseInt(String(p.time || "").split(":")[0], 10);
             if (isNaN(h)) return false;
@@ -474,7 +472,6 @@ function applyFilters() {
             if (timeFilter === "evening" && h < 18) return false;
         }
 
-        // Arama
         if (q) {
             const havuz = normalize([
                 p.league, p.lig, p.home, p.away,
@@ -486,7 +483,6 @@ function applyFilters() {
         return true;
     });
 
-    // Sıralama
     if (sortMode === "confHigh") filteredPicks.sort((a, b) => getConfidence(b) - getConfidence(a));
     else if (sortMode === "confLow") filteredPicks.sort((a, b) => getConfidence(a) - getConfidence(b));
     else if (sortMode === "oddsHigh") filteredPicks.sort((a, b) => getOddsNum(b) - getOddsNum(a));
@@ -588,14 +584,17 @@ function populateLeagues() {
 function setStatus(type, msg) {
     if (statusIndicator) statusIndicator.className = "status-indicator " + type;
     if (statusMessage) statusMessage.textContent = msg;
-    if (dataStatus) dataStatus.textContent = type === "success" ? t("current") : type === "error" ? t("error") : "...";
+    if (dataStatus) {
+        dataStatus.textContent = type === "success" ? t("current")
+            : type === "error" ? t("error") : "...";
+    }
 }
 function setLastUpdate() {
     if (!lastUpdate) return;
     const d = new Date();
     const sa = String(d.getHours()).padStart(2, "0");
     const dk = String(d.getMinutes()).padStart(2, "0");
-    lastUpdate.textContent = `${t("lastUpdate") || "Son güncelleme"}: ${sa}:${dk}`;
+    lastUpdate.textContent = `${t("lastUpdate")}: ${sa}:${dk}`;
 }
 
 /* ========== VERİ YÜKLE ========== */
@@ -604,7 +603,7 @@ async function loadPicks() {
     if (couponContainer) couponContainer.innerHTML = `
         <div class="loading-card">
             <div class="loading-spinner">⚽</div>
-            <h3>...</h3>
+            <h3>${t("loading")}</h3>
         </div>`;
 
     try {
@@ -623,7 +622,7 @@ async function loadPicks() {
         setStatus("success", `${allPicks.length} maç yüklendi`);
         setLastUpdate();
     } catch (err) {
-        console.error(err);
+        console.error("Veri yükleme hatası:", err);
         allPicks = [];
         filteredPicks = [];
         render();
@@ -634,7 +633,7 @@ async function loadPicks() {
             noResults.innerHTML = `
                 <div class="no-results-icon">⚠️</div>
                 <h3>${t("error")}</h3>
-                <p>API</p>`;
+                <p>API bağlantı hatası</p>`;
         }
     }
 }
@@ -663,11 +662,13 @@ function bindEvents() {
     });
     if (leagueSelect) leagueSelect.addEventListener("change", e => {
         leagueFilter = e.target.value;
-        applyFilters(); renderStats();
+        applyFilters();
+        renderStats();
     });
     if (timeSelect) timeSelect.addEventListener("change", e => {
         timeFilter = e.target.value;
-        applyFilters(); renderStats();
+        applyFilters();
+        renderStats();
     });
     if (sortSelect) sortSelect.addEventListener("change", e => {
         sortMode = e.target.value;
@@ -679,7 +680,6 @@ function bindEvents() {
             loadPicks().finally(() => { refreshButton.disabled = false; });
         });
     }
-    // Modal kapatma
     document.querySelectorAll("[data-close-modal]").forEach(el => {
         el.addEventListener("click", closeDetail);
     });
@@ -688,10 +688,13 @@ function bindEvents() {
     });
 }
 
-/* ========== PWA ========== */
-function registerSW() {
-    if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("/sw.js").catch(() => {});
-    }
-}
-
+/* ========== BAŞLAT ========== */
+document.addEventListener("DOMContentLoaded", () => {
+    loadTheme();
+    loadFavorites();
+    loadLang();
+    updateFavCount();
+    bindEvents();
+    loadPicks();
+    // registerSW();  ← Service Worker devre dışı
+});
