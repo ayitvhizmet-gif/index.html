@@ -1,0 +1,966 @@
+/* =====================================================
+   GENEL
+===================================================== */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #070a12;
+    color: #ffffff;
+    min-height: 100vh;
+}
+
+
+/* =====================================================
+   HEADER
+===================================================== */
+
+.header {
+    width: 100%;
+    background: #0b0f1a;
+    border-bottom: 1px solid #1d2535;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.header-container {
+    max-width: 1100px;
+    margin: auto;
+    padding: 13px 15px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 10px;
+}
+
+.logo-area {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo-icon {
+    width: 42px;
+    height: 42px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 12px;
+
+    background: linear-gradient(
+        135deg,
+        #ff1744,
+        #ff6d00
+    );
+
+    font-size: 21px;
+}
+
+.logo-title {
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: .5px;
+}
+
+.logo-subtitle {
+    margin-top: 3px;
+
+    font-size: 9px;
+    font-weight: 700;
+
+    color: #7e8aa3;
+    letter-spacing: 1px;
+}
+
+.refresh-button {
+    border: 0;
+
+    padding: 10px 12px;
+
+    border-radius: 10px;
+
+    background: #ffffff;
+    color: #070a12;
+
+    font-size: 11px;
+    font-weight: 900;
+
+    cursor: pointer;
+}
+
+.refresh-icon {
+    font-size: 17px;
+    margin-right: 3px;
+}
+
+
+/* =====================================================
+   HERO
+===================================================== */
+
+.hero {
+    background:
+        radial-gradient(
+            circle at 50% 0%,
+            #3b1222 0%,
+            #111522 42%,
+            #070a12 75%
+        );
+
+    border-bottom: 1px solid #1b2332;
+}
+
+.hero-container {
+    max-width: 1100px;
+    margin: auto;
+
+    padding: 30px 15px 25px;
+
+    text-align: center;
+}
+
+.hero-badge {
+    display: inline-block;
+
+    padding: 7px 12px;
+
+    border-radius: 50px;
+
+    background: #24151d;
+    border: 1px solid #472330;
+
+    color: #ff6685;
+
+    font-size: 10px;
+    font-weight: 900;
+
+    letter-spacing: .8px;
+}
+
+.hero h1 {
+    margin-top: 15px;
+
+    font-size: 30px;
+    line-height: 1.12;
+
+    font-weight: 900;
+}
+
+.hero h1 span {
+    display: block;
+
+    margin-top: 5px;
+
+    background: linear-gradient(
+        90deg,
+        #ff1744,
+        #ff9100
+    );
+
+    -webkit-background-clip: text;
+    background-clip: text;
+
+    color: transparent;
+}
+
+.hero p {
+    max-width: 480px;
+
+    margin: 13px auto 0;
+
+    color: #8c97aa;
+
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+
+/* =====================================================
+   HERO INFO
+===================================================== */
+
+.hero-info {
+    margin-top: 23px;
+
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+
+    gap: 8px;
+}
+
+.info-box {
+    padding: 11px 8px;
+
+    background: #0d121e;
+
+    border: 1px solid #1e2738;
+
+    border-radius: 12px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 7px;
+}
+
+.info-icon {
+    font-size: 16px;
+}
+
+.info-box small {
+    display: block;
+
+    color: #69758b;
+
+    font-size: 8px;
+    font-weight: 800;
+
+    text-align: left;
+}
+
+.info-box strong {
+    display: block;
+
+    margin-top: 3px;
+
+    color: #e8edf5;
+
+    font-size: 10px;
+
+    text-align: left;
+}
+
+
+/* =====================================================
+   ANA ALAN
+===================================================== */
+
+.main-container {
+    max-width: 1100px;
+
+    margin: auto;
+
+    padding: 15px;
+}
+
+
+/* =====================================================
+   STATUS
+===================================================== */
+
+.status-bar {
+    padding: 11px 12px;
+
+    border-radius: 11px;
+
+    background: #0d121d;
+    border: 1px solid #1b2434;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 10px;
+
+    font-size: 11px;
+
+    color: #8995a9;
+}
+
+.status-left {
+    display: flex;
+    align-items: center;
+
+    gap: 7px;
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+
+    border-radius: 50%;
+
+    display: inline-block;
+}
+
+.status-indicator.loading {
+    background: #f59e0b;
+}
+
+.status-indicator.online {
+    background: #22c55e;
+    box-shadow: 0 0 8px #22c55e;
+}
+
+.status-indicator.error {
+    background: #ef4444;
+}
+
+.last-update {
+    color: #626e83;
+
+    font-size: 9px;
+
+    text-align: right;
+}
+
+
+/* =====================================================
+   FİLTRELER
+===================================================== */
+
+.filter-section {
+    display: flex;
+
+    gap: 7px;
+
+    margin-top: 13px;
+
+    overflow-x: auto;
+
+    padding-bottom: 3px;
+
+    scrollbar-width: none;
+}
+
+.filter-section::-webkit-scrollbar {
+    display: none;
+}
+
+.filter-button {
+    flex-shrink: 0;
+
+    border: 1px solid #222c3e;
+
+    background: #101621;
+
+    color: #9aa6ba;
+
+    padding: 10px 13px;
+
+    border-radius: 50px;
+
+    font-size: 10px;
+
+    font-weight: 900;
+
+    cursor: pointer;
+
+    transition: .2s;
+}
+
+.filter-button.active {
+    background: #ffffff;
+
+    color: #080b12;
+
+    border-color: #ffffff;
+}
+
+.filter-button:active {
+    transform: scale(.96);
+}
+
+
+/* =====================================================
+   ARAMA
+===================================================== */
+
+.search-area {
+    margin-top: 12px;
+}
+
+.search-box {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+
+    gap: 8px;
+
+    padding: 0 13px;
+
+    height: 43px;
+
+    background: #0d121d;
+
+    border: 1px solid #202a3c;
+
+    border-radius: 12px;
+}
+
+.search-icon {
+    font-size: 14px;
+}
+
+.search-box input {
+    width: 100%;
+
+    height: 100%;
+
+    border: 0;
+    outline: 0;
+
+    background: transparent;
+
+    color: #ffffff;
+
+    font-size: 12px;
+}
+
+.search-box input::placeholder {
+    color: #606c80;
+}
+
+
+/* =====================================================
+   BÖLÜM BAŞLIĞI
+===================================================== */
+
+.section-title {
+    margin-top: 23px;
+    margin-bottom: 12px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 10px;
+}
+
+.section-title > div {
+    display: flex;
+    align-items: center;
+
+    gap: 8px;
+}
+
+.section-icon {
+    font-size: 18px;
+}
+
+.section-title h2 {
+    font-size: 17px;
+
+    font-weight: 900;
+}
+
+.result-count {
+    color: #667287;
+
+    font-size: 9px;
+
+    font-weight: 900;
+}
+
+
+/* =====================================================
+   KUPON GRID
+===================================================== */
+
+.coupon-grid {
+    display: grid;
+
+    grid-template-columns: 1fr;
+
+    gap: 10px;
+}
+
+
+/* =====================================================
+   KUPON KARTI
+===================================================== */
+
+.coupon-card {
+    position: relative;
+
+    background:
+        linear-gradient(
+            145deg,
+            #111725,
+            #0b101b
+        );
+
+    border: 1px solid #202a3b;
+
+    border-radius: 15px;
+
+    padding: 14px;
+
+    overflow: hidden;
+}
+
+.coupon-card::before {
+    content: "";
+
+    position: absolute;
+
+    top: 0;
+    left: 0;
+
+    width: 4px;
+    height: 100%;
+
+    background: linear-gradient(
+        #ff1744,
+        #ff9100
+    );
+}
+
+.coupon-top {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 8px;
+
+    margin-bottom: 12px;
+}
+
+.league {
+    color: #707c91;
+
+    font-size: 9px;
+
+    font-weight: 800;
+
+    text-transform: uppercase;
+
+    overflow: hidden;
+
+    white-space: nowrap;
+
+    text-overflow: ellipsis;
+}
+
+.match-time {
+    color: #a9b4c6;
+
+    font-size: 10px;
+
+    font-weight: 800;
+}
+
+.teams {
+    display: grid;
+
+    grid-template-columns: 1fr 34px 1fr;
+
+    align-items: center;
+
+    gap: 5px;
+
+    text-align: center;
+}
+
+.team {
+    color: #f0f3f8;
+
+    font-size: 13px;
+
+    line-height: 1.35;
+
+    font-weight: 900;
+}
+
+.vs {
+    color: #58657a;
+
+    font-size: 9px;
+
+    font-weight: 900;
+}
+
+.pick-area {
+    margin-top: 13px;
+
+    display: grid;
+
+    grid-template-columns: 1fr 75px;
+
+    gap: 7px;
+}
+
+.pick-box {
+    padding: 11px;
+
+    border-radius: 10px;
+
+    background: #080c14;
+
+    border: 1px solid #1d2738;
+}
+
+.pick-label {
+    display: block;
+
+    margin-bottom: 4px;
+
+    color: #69758a;
+
+    font-size: 8px;
+
+    font-weight: 900;
+}
+
+.pick-value {
+    color: #ffffff;
+
+    font-size: 15px;
+
+    font-weight: 900;
+}
+
+.odds-box {
+    padding: 11px;
+
+    border-radius: 10px;
+
+    background: #101827;
+
+    border: 1px solid #263248;
+
+    text-align: center;
+}
+
+.odds-label {
+    display: block;
+
+    color: #69758a;
+
+    font-size: 8px;
+
+    font-weight: 900;
+}
+
+.odds-value {
+    display: block;
+
+    margin-top: 4px;
+
+    color: #ffb300;
+
+    font-size: 16px;
+
+    font-weight: 900;
+}
+
+
+/* =====================================================
+   GÜVEN
+===================================================== */
+
+.confidence-area {
+    margin-top: 12px;
+}
+
+.confidence-head {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    margin-bottom: 6px;
+}
+
+.confidence-label {
+    color: #69758a;
+
+    font-size: 8px;
+
+    font-weight: 900;
+}
+
+.confidence-value {
+    color: #22c55e;
+
+    font-size: 11px;
+
+    font-weight: 900;
+}
+
+.confidence-bar {
+    height: 5px;
+
+    background: #1c2534;
+
+    border-radius: 20px;
+
+    overflow: hidden;
+}
+
+.confidence-fill {
+    height: 100%;
+
+    border-radius: 20px;
+
+    background: linear-gradient(
+        90deg,
+        #22c55e,
+        #84cc16
+    );
+}
+
+
+/* =====================================================
+   BANKO
+===================================================== */
+
+.banko-badge {
+    display: inline-flex;
+
+    align-items: center;
+
+    margin-top: 11px;
+
+    padding: 5px 8px;
+
+    border-radius: 7px;
+
+    background: #281d0a;
+
+    border: 1px solid #4c3510;
+
+    color: #ffb300;
+
+    font-size: 8px;
+
+    font-weight: 900;
+}
+
+
+/* =====================================================
+   LOADING
+===================================================== */
+
+.loading-card {
+    grid-column: 1 / -1;
+
+    padding: 50px 20px;
+
+    text-align: center;
+
+    border-radius: 15px;
+
+    background: #0d121d;
+
+    border: 1px solid #1c2535;
+}
+
+.loading-spinner {
+    font-size: 32px;
+
+    animation: spin 1.3s linear infinite;
+}
+
+.loading-card h3 {
+    margin-top: 12px;
+
+    font-size: 15px;
+}
+
+.loading-card p {
+    margin-top: 6px;
+
+    color: #69758a;
+
+    font-size: 11px;
+}
+
+@keyframes spin {
+
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+
+}
+
+
+/* =====================================================
+   SONUÇ YOK
+===================================================== */
+
+.no-results {
+    padding: 50px 15px;
+
+    text-align: center;
+}
+
+.no-results-icon {
+    font-size: 32px;
+}
+
+.no-results h3 {
+    margin-top: 12px;
+
+    font-size: 16px;
+}
+
+.no-results p {
+    margin-top: 6px;
+
+    color: #68748a;
+
+    font-size: 11px;
+}
+
+
+/* =====================================================
+   BİLGİLENDİRME
+===================================================== */
+
+.information {
+    margin-top: 20px;
+
+    padding: 14px;
+
+    display: flex;
+
+    align-items: flex-start;
+
+    gap: 10px;
+
+    background: #0c121d;
+
+    border: 1px solid #1b2637;
+
+    border-radius: 13px;
+}
+
+.information-icon {
+    font-size: 17px;
+}
+
+.information h3 {
+    font-size: 12px;
+}
+
+.information p {
+    margin-top: 5px;
+
+    color: #68758a;
+
+    font-size: 10px;
+
+    line-height: 1.6;
+}
+
+
+/* =====================================================
+   FOOTER
+===================================================== */
+
+.footer {
+    margin-top: 25px;
+
+    border-top: 1px solid #182132;
+
+    background: #080b13;
+}
+
+.footer-container {
+    padding: 25px 15px;
+
+    text-align: center;
+}
+
+.footer-logo {
+    font-size: 13px;
+
+    font-weight: 900;
+}
+
+.footer p {
+    margin-top: 6px;
+
+    color: #59667b;
+
+    font-size: 10px;
+}
+
+.footer-line {
+    width: 45px;
+
+    height: 1px;
+
+    margin: 15px auto;
+
+    background: #273143;
+}
+
+.footer small {
+    color: #4e5a6d;
+
+    font-size: 9px;
+}
+
+
+/* =====================================================
+   TABLET
+===================================================== */
+
+@media (min-width: 600px) {
+
+    .hero-container {
+        padding-top: 45px;
+        padding-bottom: 40px;
+    }
+
+    .hero h1 {
+        font-size: 40px;
+    }
+
+    .coupon-grid {
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+
+}
+
+
+/* =====================================================
+   MASAÜSTÜ
+===================================================== */
+
+@media (min-width: 900px) {
+
+    .header-container {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .main-container {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .coupon-grid {
+        grid-template-columns:
+            repeat(3, 1fr);
+    }
+
+    .hero h1 {
+        font-size: 48px;
+    }
+
+}
