@@ -1,274 +1,338 @@
 /* =====================================================
-   MAÇ KUPONLARI - APP.JS
-   Tema + Favoriler + Geri Sayım + Logolar
+   MAÇ KUPONLARI - APP.JS (Full Featured)
 ===================================================== */
 
 "use strict";
 
+/* ========== ÇEVİRİLER ========== */
+const I18N = {
+    tr: {
+        title: "MAÇ KUPONLARI", subtitle: "ÜCRETSİZ MAÇ TAHMİNLERİ",
+        refresh: "YENİLE", heroBadge: "🔥 GÜNÜN TAHMİNLERİ",
+        heroTitle: "Günün Ücretsiz", heroTitleSpan: "Maç Kuponları",
+        heroDesc: "Güncel maç tahminlerini, oranları ve güven yüzdelerini tek yerde görüntüle.",
+        date: "TARİH", status: "DURUM", prediction: "TAHMİN",
+        loadingData: "Veriler yükleniyor...", current: "Güncel", error: "Hata",
+        filterAll: "🏆 TÜMÜ", filterBanko: "🔥 BANKO", filterHigh: "⭐ %75+",
+        filterToday: "📅 BUGÜN", filterFav: "❤️ FAVORİLER",
+        leagueAll: "Tüm Ligler", timeAll: "Tüm Saatler",
+        timeMorning: "Sabah (00-12)", timeAfternoon: "Öğleden Sonra (12-18)", timeEvening: "Akşam (18-24)",
+        sortDefault: "Sıralama: Varsayılan", sortConfHigh: "Güven ↓", sortConfLow: "Güven ↑",
+        sortOddsHigh: "Oran ↓", sortOddsLow: "Oran ↑", sortTime: "Saat (Erken→Geç)",
+        searchPlaceholder: "Takım veya lig ara...",
+        sectionTitle: "Günün Kuponları",
+        noResult: "Tahmin bulunamadı", noResultDesc: "Arama veya filtre kriterlerini değiştirin.",
+        info: "Bilgilendirme",
+        infoDesc: "Bu sayfa yalnızca maç tahminlerini bilgilendirme amacıyla gösterir. Tahminler kesin sonuç veya kazanç garantisi değildir.",
+        footerDesc: "Günlük ücretsiz maç tahminleri", footerCopy: "© 2026 Maç Kuponları",
+        statsTitle: "📊 Günün İstatistikleri",
+        statTotal: "Toplam Maç", statBanko: "Banko", statHigh: "Yüksek Güven",
+        statAvgConf: "Ort. Güven", statAvgOdds: "Ort. Oran",
+        chartTitle: "📈 Güven Dağılımı",
+        countdownLabel: "⏱️ KALAN SÜRE", started: "🔴 Başladı",
+        detail: "Maç Detayı", share: "Paylaş", close: "Kapat",
+        copied: "Bağlantı kopyalandı!",
+        noShare: "Paylaşım desteklenmiyor."
+    },
+    en: {
+        title: "MATCH COUPONS", subtitle: "FREE MATCH PREDICTIONS",
+        refresh: "REFRESH", heroBadge: "🔥 TODAY'S PICKS",
+        heroTitle: "Today's Free", heroTitleSpan: "Match Coupons",
+        heroDesc: "View today's match predictions, odds and confidence ratings in one place.",
+        date: "DATE", status: "STATUS", prediction: "PREDICTION",
+        loadingData: "Loading data...", current: "Current", error: "Error",
+        filterAll: "🏆 ALL", filterBanko: "🔥 BANKER", filterHigh: "⭐ 75%+",
+        filterToday: "📅 TODAY", filterFav: "❤️ FAVORITES",
+        leagueAll: "All Leagues", timeAll: "All Times",
+        timeMorning: "Morning (00-12)", timeAfternoon: "Afternoon (12-18)", timeEvening: "Evening (18-24)",
+        sortDefault: "Sort: Default", sortConfHigh: "Confidence ↓", sortConfLow: "Confidence ↑",
+        sortOddsHigh: "Odds ↓", sortOddsLow: "Odds ↑", sortTime: "Time (Early→Late)",
+        searchPlaceholder: "Search team or league...",
+        sectionTitle: "Today's Coupons",
+        noResult: "No prediction found", noResultDesc: "Change search or filter criteria.",
+        info: "Information",
+        infoDesc: "This page only displays match predictions for informational purposes. Not a guarantee.",
+        footerDesc: "Daily free match predictions", footerCopy: "© 2026 Match Coupons",
+        statsTitle: "📊 Today's Statistics",
+        statTotal: "Total Matches", statBanko: "Banker", statHigh: "High Confidence",
+        statAvgConf: "Avg. Confidence", statAvgOdds: "Avg. Odds",
+        chartTitle: "📈 Confidence Distribution",
+        countdownLabel: "⏱️ TIME LEFT", started: "🔴 Started",
+        detail: "Match Detail", share: "Share", close: "Close",
+        copied: "Link copied!",
+        noShare: "Sharing not supported."
+    }
+};
 
-/* =====================================================
-   DEĞİŞKENLER
-===================================================== */
-
-let allPicks = [];
-let filteredPicks = [];
-let activeFilter = "all";
-let searchText = "";
-let favorites = new Set();
-let countdownTimer = null;
+/* ========== DURUM ========== */
+let allPicks = [], filteredPicks = [];
+let activeFilter = "all", searchText = "";
+let leagueFilter = "all", timeFilter = "all", sortMode = "default";
+let favorites = new Set(), countdownTimer = null;
+let currentLang = "tr";
 
 const FAV_KEY = "coupon_favorites";
 const THEME_KEY = "coupon_theme";
+const LANG_KEY = "coupon_lang";
 
+/* ========== ELEMENTLER ========== */
+const $ = id => document.getElementById(id);
+const couponContainer = $("couponContainer");
+const noResults = $("noResults");
+const resultCount = $("resultCount");
+const searchInput = $("searchInput");
+const filterButtons = document.querySelectorAll(".filter-button");
+const refreshButton = $("refreshButton");
+const themeToggle = $("themeToggle");
+const langToggle = $("langToggle");
+const todayDate = $("todayDate");
+const dataStatus = $("dataStatus");
+const matchCount = $("matchCount");
+const statusIndicator = $("statusIndicator");
+const statusMessage = $("statusMessage");
+const lastUpdate = $("lastUpdate");
+const favCount = $("favCount");
+const statTotal = $("statTotal");
+const statBanko = $("statBanko");
+const statHigh = $("statHigh");
+const statAvgConf = $("statAvgConf");
+const statAvgOdds = $("statAvgOdds");
+const chartBars = $("chartBars");
+const leagueSelect = $("leagueSelect");
+const timeSelect = $("timeSelect");
+const sortSelect = $("sortSelect");
+const detailModal = $("detailModal");
+const modalBody = $("modalBody");
 
-/* =====================================================
-   HTML ELEMENTLERİ
-===================================================== */
-
-const couponContainer = document.getElementById("couponContainer");
-const noResults       = document.getElementById("noResults");
-const resultCount     = document.getElementById("resultCount");
-const searchInput     = document.getElementById("searchInput");
-const filterButtons   = document.querySelectorAll(".filter-button");
-const refreshButton   = document.getElementById("refreshButton");
-const themeToggle     = document.getElementById("themeToggle");
-const todayDate       = document.getElementById("todayDate");
-const dataStatus      = document.getElementById("dataStatus");
-const matchCount      = document.getElementById("matchCount");
-const statusIndicator = document.getElementById("statusIndicator");
-const statusMessage   = document.getElementById("statusMessage");
-const lastUpdate      = document.getElementById("lastUpdate");
-const favCount        = document.getElementById("favCount");
-
-
-/* =====================================================
-   TEMA
-===================================================== */
-
+/* ========== TEMA ========== */
 function loadTheme() {
-    let saved = "dark";
-    try { saved = localStorage.getItem(THEME_KEY) || "dark"; } catch (e) {}
-    document.documentElement.dataset.theme = saved;
-    updateThemeIcon(saved);
+    let t = "dark";
+    try { t = localStorage.getItem(THEME_KEY) || "dark"; } catch (e) {}
+    document.documentElement.dataset.theme = t;
+    updateThemeIcon(t);
 }
-
-function setTheme(theme) {
-    document.documentElement.dataset.theme = theme;
-    try { localStorage.setItem(THEME_KEY, theme); } catch (e) {}
-    updateThemeIcon(theme);
+function setTheme(t) {
+    document.documentElement.dataset.theme = t;
+    try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
+    updateThemeIcon(t);
 }
-
-function updateThemeIcon(theme) {
-    const icon = document.querySelector(".theme-icon");
-    if (icon) icon.textContent = theme === "light" ? "☀️" : "🌙";
+function updateThemeIcon(t) {
+    const i = document.querySelector(".theme-icon");
+    if (i) i.textContent = t === "light" ? "☀️" : "🌙";
 }
-
 function toggleTheme() {
-    const current = document.documentElement.dataset.theme || "dark";
-    setTheme(current === "dark" ? "light" : "dark");
+    setTheme((document.documentElement.dataset.theme || "dark") === "dark" ? "light" : "dark");
 }
 
+/* ========== DİL ========== */
+function loadLang() {
+    let l = "tr";
+    try { l = localStorage.getItem(LANG_KEY) || "tr"; } catch (e) {}
+    setLang(l);
+}
+function setLang(lang) {
+    currentLang = lang;
+    document.documentElement.lang = lang;
+    try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+    const lbl = document.querySelector(".lang-label");
+    if (lbl) lbl.textContent = lang.toUpperCase();
+    applyTranslations();
+    render();
+    renderStats();
+    renderChart();
+}
+function toggleLang() { setLang(currentLang === "tr" ? "en" : "tr"); }
+function t(key) { return (I18N[currentLang] && I18N[currentLang][key]) || key; }
 
-/* =====================================================
-   FAVORİLER
-===================================================== */
+function applyTranslations() {
+    document.querySelectorAll("[data-i18n]").forEach(el => {
+        el.textContent = t(el.dataset.i18n);
+    });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+        el.placeholder = t(el.dataset.i18nPlaceholder);
+    });
+    // Select option'ları
+    document.querySelectorAll("#leagueSelect option[data-i18n]").forEach(el => {
+        el.textContent = t(el.dataset.i18n);
+    });
+    document.querySelectorAll("#timeSelect option[data-i18n]").forEach(el => {
+        el.textContent = t(el.dataset.i18n);
+    });
+    document.querySelectorAll("#sortSelect option[data-i18n]").forEach(el => {
+        el.textContent = t(el.dataset.i18n);
+    });
+}
 
+/* ========== FAVORİLER ========== */
 function loadFavorites() {
     try {
         const raw = localStorage.getItem(FAV_KEY);
         if (raw) favorites = new Set(JSON.parse(raw));
     } catch (e) { favorites = new Set(); }
 }
-
 function saveFavorites() {
-    try {
-        localStorage.setItem(FAV_KEY, JSON.stringify([...favorites]));
-    } catch (e) {}
+    try { localStorage.setItem(FAV_KEY, JSON.stringify([...favorites])); } catch (e) {}
 }
-
 function toggleFavorite(id) {
     if (!id) return;
-    if (favorites.has(id)) {
-        favorites.delete(id);
-    } else {
-        favorites.add(id);
-    }
+    favorites.has(id) ? favorites.delete(id) : favorites.add(id);
     saveFavorites();
     updateFavCount();
     applyFilters();
 }
-
 function updateFavCount() {
-    if (favCount) {
-        favCount.textContent = favorites.size > 0 ? favorites.size : "";
-    }
+    if (favCount) favCount.textContent = favorites.size > 0 ? favorites.size : "";
 }
 
-
-/* =====================================================
-   YARDIMCI FONKSİYONLAR
-===================================================== */
-
-function normalize(str) {
-    return String(str || "")
-        .toLowerCase()
-        .replace(/ı/g, "i")
-        .replace(/İ/g, "i")
-        .replace(/ş/g, "s")
-        .replace(/ğ/g, "g")
-        .replace(/ü/g, "u")
-        .replace(/ö/g, "o")
-        .replace(/ç/g, "c")
-        .trim();
+/* ========== YARDIMCI ========== */
+function normalize(s) {
+    return String(s || "").toLowerCase()
+        .replace(/ı/g,"i").replace(/İ/g,"i").replace(/ş/g,"s").replace(/ğ/g,"g")
+        .replace(/ü/g,"u").replace(/ö/g,"o").replace(/ç/g,"c").trim();
 }
-
-function escapeHtml(str) {
-    return String(str == null ? "" : str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+function escapeHtml(s) {
+    return String(s == null ? "" : s)
+        .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
 }
-
-function formatDate(value) {
-    if (!value) return "";
-    if (/^\d{1,2}:\d{2}$/.test(String(value))) return String(value);
-
-    const d = new Date(value);
-    if (isNaN(d.getTime())) return String(value);
-
-    const gun = String(d.getDate()).padStart(2, "0");
-    const ay  = String(d.getMonth() + 1).padStart(2, "0");
-    const yil = d.getFullYear();
-    const sa  = String(d.getHours()).padStart(2, "0");
-    const dk  = String(d.getMinutes()).padStart(2, "0");
-
-    return `${gun}.${ay}.${yil} ${sa}:${dk}`;
+function getConfidence(p) {
+    const r = Number(p.prob || p.confidence || p.guven || 0);
+    if (!r) return 0;
+    if (r <= 5) return r * 20;
+    if (r <= 10) return r * 10;
+    return r;
 }
-
-function formatToday() {
-    const aylar = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran",
-                   "Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
-    const d = new Date();
-    return `${d.getDate()} ${aylar[d.getMonth()]} ${d.getFullYear()}`;
+function getOddsNum(p) {
+    const o = String(p.odds || p.oran || "0").replace(",", ".");
+    return parseFloat(o) || 0;
 }
-
-function statusInfo(status) {
-    const s = normalize(status);
-    if (s === "won"  || s === "kazandi"  || s === "1") return { text: "KAZANDI",  cls: "won"  };
-    if (s === "lost" || s === "kaybetti" || s === "0") return { text: "KAYBETTİ", cls: "lost" };
-    if (s === "void" || s === "iptal")                 return { text: "İPTAL",    cls: "void" };
+function getPickId(p) {
+    return p.id || `${p.home}-${p.away}-${p.time}`;
+}
+function isBanko(p) {
+    return p.isHero === true || getConfidence(p) >= 85;
+}
+function statusInfo(s) {
+    const n = normalize(s);
+    if (n === "won" || n === "kazandi" || n === "1") return { text: "KAZANDI", cls: "won" };
+    if (n === "lost" || n === "kaybetti" || n === "0") return { text: "KAYBETTİ", cls: "lost" };
+    if (n === "void" || n === "iptal") return { text: "İPTAL", cls: "void" };
     return { text: "DEVAM EDİYOR", cls: "pending" };
 }
-
-function confidenceStars(value) {
-    let n = Number(value) || 0;
+function confidenceStars(v) {
+    let n = Number(v) || 0;
     if (n > 10) n = Math.round(n / 20);
     else if (n > 5) n = Math.round(n / 2);
     n = Math.max(1, Math.min(5, n));
     return "★".repeat(n) + "☆".repeat(5 - n);
 }
-
-function getConfidence(pick) {
-    const raw = Number(pick.prob || pick.confidence || pick.guven || 0);
-    if (!raw) return 0;
-    if (raw <= 5)  return raw * 20;
-    if (raw <= 10) return raw * 10;
-    return raw;
+function cardConfClass(p) {
+    const c = getConfidence(p);
+    if (isBanko(p)) return "conf-banko";
+    if (c >= 85) return "conf-banko";
+    if (c >= 75) return "conf-high";
+    if (c >= 60) return "conf-mid";
+    return "conf-low";
+}
+function formatToday() {
+    const aylar = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+    const d = new Date();
+    return `${d.getDate()} ${aylar[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-
-/* =====================================================
-   GERİ SAYIM
-===================================================== */
-
+/* ========== GERİ SAYIM ========== */
 function getCountdown(kickoff) {
     if (!kickoff) return "";
-
     const t = new Date(kickoff).getTime();
     if (isNaN(t)) return "";
-
     const diff = t - Date.now();
-
-    if (diff <= 0) return "🔴 Başladı";
-
+    if (diff <= 0) return t("started");
     const totalMin = Math.floor(diff / 60000);
     const hours = Math.floor(totalMin / 60);
     const mins = totalMin % 60;
     const days = Math.floor(hours / 24);
-
     if (days > 0) return `${days}g ${hours % 24}s`;
     if (hours > 0) return `${hours}s ${mins}dk`;
     return `${mins} dk`;
 }
-
 function updateCountdowns() {
     document.querySelectorAll(".countdown[data-kickoff]").forEach(el => {
         el.textContent = getCountdown(el.dataset.kickoff);
     });
 }
-
 function startCountdownTimer() {
     if (countdownTimer) clearInterval(countdownTimer);
     updateCountdowns();
     countdownTimer = setInterval(updateCountdowns, 30000);
 }
 
+/* ========== TOAST ========== */
+let toastEl = null;
+function showToast(msg) {
+    if (!toastEl) {
+        toastEl = document.createElement("div");
+        toastEl.className = "toast";
+        document.body.appendChild(toastEl);
+    }
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastEl._t);
+    toastEl._t = setTimeout(() => toastEl.classList.remove("show"), 2200);
+}
 
-/* =====================================================
-   KART OLUŞTURMA
-===================================================== */
+/* ========== PAYLAŞ ========== */
+async function sharePick(p) {
+    const url = window.location.origin + (p.slug ? `/tr/match/${p.slug}` : "");
+    const text = `⚽ ${p.home} - ${p.away}\n🎯 ${t("prediction")}: ${p.tip || p.pick || ""}\n📊 Oran: ${p.odds || ""}\n🏆 Güven: %${getConfidence(p)}`;
+    if (navigator.share) {
+        try { await navigator.share({ title: "Maç Kuponu", text, url }); } catch (e) {}
+    } else {
+        try {
+            await navigator.clipboard.writeText(`${text}\n${url}`);
+            showToast(t("copied"));
+        } catch (e) { showToast(t("noShare")); }
+    }
+}
 
-function createCard(pick) {
+/* ========== KART ========== */
+function createCard(p) {
     const card = document.createElement("article");
-    card.className = "coupon-card";
+    const id = getPickId(p);
+    const isFav = favorites.has(id);
+    const status = statusInfo(p.status);
+    const stars = confidenceStars(getConfidence(p));
+    const oran = p.odds || p.oran || "-";
+    const tahmin = p.tip || p.pick || p.prediction || p.tahmin || "";
+    const lig = p.league || p.lig || "";
+    const ev = p.home || p.evSahibi || "";
+    const dep = p.away || p.deplasman || "";
+    const homeLogo = p.homeLogo || "";
+    const awayLogo = p.awayLogo || "";
+    const kickoff = p.kickoff || "";
+    const macSaati = p.time || p.date || "";
+    const analiz = p.analysis || p.analiz || "";
+    const conf = getConfidence(p);
 
-    const pickId   = pick.id || `${pick.home}-${pick.away}-${pick.time}`;
-    const isFav    = favorites.has(pickId);
-    const status   = statusInfo(pick.status);
-    const stars    = confidenceStars(getConfidence(pick));
-    const oran     = pick.odds || pick.oran || "-";
-    const tahmin   = pick.tip || pick.pick || pick.prediction || pick.tahmin || "";
-    const lig      = pick.league || pick.lig || "";
-    const ev       = pick.home || pick.evSahibi || "";
-    const dep      = pick.away || pick.deplasman || "";
-    const homeLogo = pick.homeLogo || "";
-    const awayLogo = pick.awayLogo || "";
-    const kickoff  = pick.kickoff || "";
-    const macSaati = formatDate(pick.time || pick.date || pick.tarih || "");
-    const analiz   = pick.analysis || pick.analiz || "";
+    card.className = `coupon-card ${cardConfClass(p)}`;
 
-    const isBanko  = pick.isHero === true || getConfidence(pick) >= 85;
-    const kategori = isBanko ? "banko" : "genel";
-
-    card.dataset.category = normalize(kategori);
-    card.dataset.status   = status.cls;
-
-    const bankoBadge = isBanko
-        ? `<span class="banko-badge">BANKO</span>` : "";
-
-    const homeLogoHtml = homeLogo
-        ? `<img src="${escapeHtml(homeLogo)}" class="team-logo" alt="" loading="lazy"
-             onerror="this.style.display='none'">` : "";
-
-    const awayLogoHtml = awayLogo
-        ? `<img src="${escapeHtml(awayLogo)}" class="team-logo" alt="" loading="lazy"
-             onerror="this.style.display='none'">` : "";
-
-    const countdownHtml = kickoff
-        ? `<div class="countdown-box">
-             <span class="countdown-label">⏱️ KALAN SÜRE</span>
-             <span class="countdown" data-kickoff="${escapeHtml(kickoff)}">${getCountdown(kickoff)}</span>
-           </div>` : "";
+    const bankoBadge = isBanko(p) ? `<span class="banko-badge">BANKO</span>` : "";
+    const homeLogoHtml = homeLogo ? `<img src="${escapeHtml(homeLogo)}" class="team-logo" alt="" loading="lazy" onerror="this.style.display='none'">` : "";
+    const awayLogoHtml = awayLogo ? `<img src="${escapeHtml(awayLogo)}" class="team-logo" alt="" loading="lazy" onerror="this.style.display='none'">` : "";
+    const countdownHtml = kickoff ? `
+        <div class="countdown-box">
+            <span class="countdown-label">${t("countdownLabel")}</span>
+            <span class="countdown" data-kickoff="${escapeHtml(kickoff)}">${getCountdown(kickoff)}</span>
+        </div>` : "";
 
     card.innerHTML = `
-        <button class="favorite-btn ${isFav ? "active" : ""}"
-                data-id="${escapeHtml(pickId)}"
-                type="button"
-                title="${isFav ? "Favorilerden çıkar" : "Favorilere ekle"}">
-            ${isFav ? "★" : "☆"}
-        </button>
+        <div class="card-actions">
+            <button class="card-action-btn fav-btn ${isFav ? "active" : ""}" type="button" title="Favori">
+                ${isFav ? "★" : "☆"}
+            </button>
+            <button class="card-action-btn share-btn" type="button" title="${t("share")}">
+                📤
+            </button>
+        </div>
 
         <div class="card-top">
             <span class="league">${escapeHtml(lig)}</span>
@@ -290,7 +354,7 @@ function createCard(pick) {
 
         <div class="card-mid">
             <div class="info-box">
-                <span class="info-label">TAHMİN</span>
+                <span class="info-label">${t("prediction")}</span>
                 <span class="info-value">${escapeHtml(tahmin)}</span>
             </div>
             <div class="info-box">
@@ -304,229 +368,340 @@ function createCard(pick) {
 
         <div class="card-bottom">
             <span class="date">${escapeHtml(macSaati)}</span>
-            <span class="stars" title="Güven: %${getConfidence(pick)}">${stars}</span>
+            <span class="stars" title="%${conf}">${stars}</span>
         </div>
     `;
 
-    // Favori butonu dinleyicisi
-    const favBtn = card.querySelector(".favorite-btn");
-    if (favBtn) {
-        favBtn.addEventListener("click", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            toggleFavorite(pickId);
-        });
-    }
+    // Fav
+    card.querySelector(".fav-btn").addEventListener("click", e => {
+        e.stopPropagation();
+        toggleFavorite(id);
+    });
+    // Share
+    card.querySelector(".share-btn").addEventListener("click", e => {
+        e.stopPropagation();
+        sharePick(p);
+    });
+    // Detail modal
+    card.addEventListener("click", () => openDetail(p));
 
     return card;
 }
 
+/* ========== MODAL ========== */
+function openDetail(p) {
+    const conf = getConfidence(p);
+    const status = statusInfo(p.status);
+    const homeLogo = p.homeLogo ? `<img src="${escapeHtml(p.homeLogo)}" class="modal-team-logo" onerror="this.style.display='none'">` : "";
+    const awayLogo = p.awayLogo ? `<img src="${escapeHtml(p.awayLogo)}" class="modal-team-logo" onerror="this.style.display='none'">` : "";
+    const id = getPickId(p);
+    const isFav = favorites.has(id);
 
-/* =====================================================
-   FİLTRELEME
-===================================================== */
+    modalBody.innerHTML = `
+        <div class="modal-league">${escapeHtml(p.league || "")}</div>
+        <div class="modal-teams">
+            <div class="modal-team">
+                ${homeLogo}
+                <span class="modal-team-name">${escapeHtml(p.home || "")}</span>
+            </div>
+            <span class="modal-vs">-</span>
+            <div class="modal-team">
+                ${awayLogo}
+                <span class="modal-team-name">${escapeHtml(p.away || "")}</span>
+            </div>
+        </div>
+        <div class="modal-info-grid">
+            <div class="modal-info-box">
+                <div class="modal-info-label">${t("prediction")}</div>
+                <div class="modal-info-value">${escapeHtml(p.tip || p.pick || "")}</div>
+            </div>
+            <div class="modal-info-box">
+                <div class="modal-info-label">ORAN</div>
+                <div class="modal-info-value odds">${escapeHtml(String(p.odds || ""))}</div>
+            </div>
+            <div class="modal-info-box">
+                <div class="modal-info-label">GÜVEN</div>
+                <div class="modal-info-value conf">%${conf}</div>
+            </div>
+        </div>
+        ${p.analysis ? `<div class="modal-analysis">${escapeHtml(p.analysis)}</div>` : ""}
+        <div class="modal-actions">
+            <button class="modal-action-btn" id="modalFavBtn">
+                ${isFav ? "★ Favorilerden Çıkar" : "☆ Favorilere Ekle"}
+            </button>
+            <button class="modal-action-btn" id="modalShareBtn">
+                📤 ${t("share")}
+            </button>
+        </div>
+    `;
 
+    $("modalFavBtn").addEventListener("click", () => {
+        toggleFavorite(id);
+        openDetail(p); // yenile
+    });
+    $("modalShareBtn").addEventListener("click", () => sharePick(p));
+
+    detailModal.classList.add("open");
+    document.body.style.overflow = "hidden";
+}
+
+function closeDetail() {
+    detailModal.classList.remove("open");
+    document.body.style.overflow = "";
+}
+
+/* ========== FİLTRELEME ========== */
 function applyFilters() {
     const q = normalize(searchText);
+    filteredPicks = allPicks.filter(p => {
+        const id = getPickId(p);
 
-    filteredPicks = allPicks.filter((pick) => {
-        const pickId = pick.id || `${pick.home}-${pick.away}-${pick.time}`;
+        // Kategori filtresi
+        if (activeFilter === "banko" && !isBanko(p)) return false;
+        if (activeFilter === "high" && getConfidence(p) < 75) return false;
+        if (activeFilter === "today" && p.today === false) return false;
+        if (activeFilter === "favorites" && !favorites.has(id)) return false;
 
-        if (activeFilter !== "all") {
-            if (activeFilter === "banko") {
-                const isBanko = pick.isHero === true || getConfidence(pick) >= 85;
-                if (!isBanko) return false;
-            }
-            else if (activeFilter === "high") {
-                if (getConfidence(pick) < 75) return false;
-            }
-            else if (activeFilter === "today") {
-                if (pick.today === false) return false;
-            }
-            else if (activeFilter === "favorites") {
-                if (!favorites.has(pickId)) return false;
-            }
-            else {
-                const kategori = normalize(pick.category || pick.kategori || "genel");
-                if (kategori !== activeFilter) return false;
-            }
+        // Lig filtresi
+        if (leagueFilter !== "all" && normalize(p.league) !== leagueFilter) return false;
+
+        // Saat filtresi
+        if (timeFilter !== "all") {
+            const h = parseInt(String(p.time || "").split(":")[0], 10);
+            if (isNaN(h)) return false;
+            if (timeFilter === "morning" && h >= 12) return false;
+            if (timeFilter === "afternoon" && (h < 12 || h >= 18)) return false;
+            if (timeFilter === "evening" && h < 18) return false;
         }
 
+        // Arama
         if (q) {
             const havuz = normalize([
-                pick.league, pick.lig,
-                pick.home, pick.evSahibi,
-                pick.away, pick.deplasman,
-                pick.tip, pick.pick, pick.prediction, pick.tahmin,
-                pick.analysis, pick.analiz
+                p.league, p.lig, p.home, p.away,
+                p.tip, p.pick, p.prediction, p.tahmin,
+                p.analysis, p.analiz
             ].join(" "));
             if (!havuz.includes(q)) return false;
         }
-
         return true;
     });
+
+    // Sıralama
+    if (sortMode === "confHigh") filteredPicks.sort((a, b) => getConfidence(b) - getConfidence(a));
+    else if (sortMode === "confLow") filteredPicks.sort((a, b) => getConfidence(a) - getConfidence(b));
+    else if (sortMode === "oddsHigh") filteredPicks.sort((a, b) => getOddsNum(b) - getOddsNum(a));
+    else if (sortMode === "oddsLow") filteredPicks.sort((a, b) => getOddsNum(a) - getOddsNum(b));
+    else if (sortMode === "time") filteredPicks.sort((a, b) => String(a.time || "").localeCompare(String(b.time || "")));
 
     render();
 }
 
-
-/* =====================================================
-   EKRANA ÇİZİM
-===================================================== */
-
+/* ========== EKRANA ÇİZİM ========== */
 function render() {
     if (!couponContainer) return;
-
     couponContainer.innerHTML = "";
 
-    if (resultCount) {
-        resultCount.textContent = `${filteredPicks.length} MAÇ`;
-    }
-
-    if (matchCount) {
-        matchCount.textContent = String(filteredPicks.length);
-    }
+    if (resultCount) resultCount.textContent = `${filteredPicks.length} MAÇ`;
+    if (matchCount) matchCount.textContent = String(filteredPicks.length);
 
     if (filteredPicks.length === 0) {
         if (noResults) noResults.style.display = "block";
         return;
     }
-
     if (noResults) noResults.style.display = "none";
 
-    const fragment = document.createDocumentFragment();
-    filteredPicks.forEach(pick => {
-        fragment.appendChild(createCard(pick));
-    });
-    couponContainer.appendChild(fragment);
-
+    const frag = document.createDocumentFragment();
+    filteredPicks.forEach(p => frag.appendChild(createCard(p)));
+    couponContainer.appendChild(frag);
     startCountdownTimer();
 }
 
-
-/* =====================================================
-   DURUM
-===================================================== */
-
-function setStatus(type, message) {
-    if (statusIndicator) statusIndicator.className = "status-indicator " + type;
-    if (statusMessage) statusMessage.textContent = message;
-    if (dataStatus) {
-        dataStatus.textContent =
-            type === "success" ? "Güncel" :
-            type === "error"   ? "Hata"   : "Yükleniyor...";
+/* ========== İSTATİSTİK ========== */
+function renderStats() {
+    const src = filteredPicks.length > 0 ? filteredPicks : allPicks;
+    if (!src.length) {
+        if (statTotal) statTotal.textContent = "0";
+        if (statBanko) statBanko.textContent = "0";
+        if (statHigh) statHigh.textContent = "0";
+        if (statAvgConf) statAvgConf.textContent = "%0";
+        if (statAvgOdds) statAvgOdds.textContent = "0.00";
+        return;
     }
+    const total = src.length;
+    const banko = src.filter(isBanko).length;
+    const high = src.filter(p => getConfidence(p) >= 75).length;
+    const avgConf = Math.round(src.reduce((s, p) => s + getConfidence(p), 0) / total);
+    const avgOddsArr = src.map(getOddsNum).filter(n => n > 0);
+    const avgOdds = avgOddsArr.length ? (avgOddsArr.reduce((a, b) => a + b, 0) / avgOddsArr.length).toFixed(2) : "0.00";
+
+    if (statTotal) statTotal.textContent = total;
+    if (statBanko) statBanko.textContent = banko;
+    if (statHigh) statHigh.textContent = high;
+    if (statAvgConf) statAvgConf.textContent = `%${avgConf}`;
+    if (statAvgOdds) statAvgOdds.textContent = avgOdds;
 }
 
+/* ========== GRAFİK ========== */
+function renderChart() {
+    if (!chartBars) return;
+    const src = allPicks;
+    if (!src.length) { chartBars.innerHTML = ""; return; }
+
+    const buckets = [
+        { label: "0-50",  min: 0,  max: 50,  count: 0 },
+        { label: "50-70", min: 50, max: 70,  count: 0 },
+        { label: "70-80", min: 70, max: 80,  count: 0 },
+        { label: "80-90", min: 80, max: 90,  count: 0 },
+        { label: "90-100",min: 90, max: 101, count: 0 }
+    ];
+    src.forEach(p => {
+        const c = getConfidence(p);
+        for (const b of buckets) {
+            if (c >= b.min && c < b.max) { b.count++; break; }
+        }
+    });
+    const maxCount = Math.max(...buckets.map(b => b.count), 1);
+
+    chartBars.innerHTML = buckets.map(b => {
+        const height = Math.round((b.count / maxCount) * 100);
+        return `
+            <div class="chart-bar-wrap">
+                <div class="chart-bar-value">${b.count}</div>
+                <div class="chart-bar" style="height:${height}%"></div>
+                <div class="chart-bar-label">${b.label}%</div>
+            </div>
+        `;
+    }).join("");
+}
+
+/* ========== LİG DROPDOWN ========== */
+function populateLeagues() {
+    if (!leagueSelect) return;
+    const leagues = [...new Set(allPicks.map(p => p.league).filter(Boolean))].sort();
+    const current = leagueSelect.value;
+    leagueSelect.innerHTML = `<option value="all">${t("leagueAll")}</option>` +
+        leagues.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join("");
+    if (leagues.includes(current)) leagueSelect.value = current;
+}
+
+/* ========== DURUM ========== */
+function setStatus(type, msg) {
+    if (statusIndicator) statusIndicator.className = "status-indicator " + type;
+    if (statusMessage) statusMessage.textContent = msg;
+    if (dataStatus) dataStatus.textContent = type === "success" ? t("current") : type === "error" ? t("error") : "...";
+}
 function setLastUpdate() {
     if (!lastUpdate) return;
     const d = new Date();
     const sa = String(d.getHours()).padStart(2, "0");
     const dk = String(d.getMinutes()).padStart(2, "0");
-    lastUpdate.textContent = `Son güncelleme: ${sa}:${dk}`;
+    lastUpdate.textContent = `${t("lastUpdate") || "Son güncelleme"}: ${sa}:${dk}`;
 }
 
-
-/* =====================================================
-   VERİ YÜKLEME
-===================================================== */
-
+/* ========== VERİ YÜKLE ========== */
 async function loadPicks() {
-    setStatus("loading", "Veriler yükleniyor...");
-
-    couponContainer.innerHTML = `
+    setStatus("loading", t("loadingData"));
+    if (couponContainer) couponContainer.innerHTML = `
         <div class="loading-card">
             <div class="loading-spinner">⚽</div>
-            <h3>Kuponlar hazırlanıyor...</h3>
-            <p>Güncel tahminler kontrol ediliyor.</p>
-        </div>
-    `;
+            <h3>...</h3>
+        </div>`;
 
     try {
         const res = await fetch("/api/picks", { cache: "no-store" });
         if (!res.ok) throw new Error("HTTP " + res.status);
-
         const data = await res.json();
-        if (data && data.success === false) {
-            throw new Error(data.error || "API hata döndü");
-        }
+        if (data && data.success === false) throw new Error(data.error || "API error");
 
         allPicks = Array.isArray(data) ? data : (data.picks || []);
-
+        populateLeagues();
         applyFilters();
+        renderStats();
+        renderChart();
         updateFavCount();
 
-        setStatus("success", `${allPicks.length} maç başarıyla yüklendi`);
+        setStatus("success", `${allPicks.length} maç yüklendi`);
         setLastUpdate();
-
     } catch (err) {
-        console.error("Kuponlar yüklenemedi:", err);
-
+        console.error(err);
         allPicks = [];
         filteredPicks = [];
-        couponContainer.innerHTML = "";
         render();
-
-        setStatus("error", "Veriler yüklenemedi");
-
+        renderStats();
+        setStatus("error", t("error"));
         if (noResults) {
             noResults.style.display = "block";
             noResults.innerHTML = `
                 <div class="no-results-icon">⚠️</div>
-                <h3>Kupon verisi yüklenemedi</h3>
-                <p>API çalışmıyor olabilir. Lütfen tekrar deneyin.</p>
-            `;
+                <h3>${t("error")}</h3>
+                <p>API</p>`;
         }
     }
 }
 
+/* ========== OLAYLAR ========== */
+function bindEvents() {
+    if (todayDate) todayDate.textContent = formatToday();
+    if (themeToggle) themeToggle.addEventListener("click", toggleTheme);
+    if (langToggle) langToggle.addEventListener("click", toggleLang);
 
-/* =====================================================
-   OLAYLAR
-===================================================== */
-
-if (todayDate) todayDate.textContent = formatToday();
-
-if (themeToggle) {
-    themeToggle.addEventListener("click", toggleTheme);
-}
-
-if (searchInput) {
-    searchInput.addEventListener("input", (e) => {
-        searchText = e.target.value;
-        applyFilters();
-    });
-}
-
-filterButtons.forEach((btn) => {
-    btn.addEventListener("click", () => {
-        filterButtons.forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        activeFilter = normalize(btn.dataset.filter || "all");
-        applyFilters();
-    });
-});
-
-if (refreshButton) {
-    refreshButton.addEventListener("click", () => {
-        refreshButton.disabled = true;
-        const icon = refreshButton.querySelector(".refresh-icon");
-        if (icon) icon.textContent = "⏳";
-        loadPicks().finally(() => {
-            refreshButton.disabled = false;
-            if (icon) icon.textContent = "↻";
+    if (searchInput) {
+        searchInput.addEventListener("input", e => {
+            searchText = e.target.value;
+            applyFilters();
+            renderStats();
+        });
+    }
+    filterButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+            filterButtons.forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            activeFilter = normalize(btn.dataset.filter || "all");
+            applyFilters();
+            renderStats();
         });
     });
+    if (leagueSelect) leagueSelect.addEventListener("change", e => {
+        leagueFilter = e.target.value;
+        applyFilters(); renderStats();
+    });
+    if (timeSelect) timeSelect.addEventListener("change", e => {
+        timeFilter = e.target.value;
+        applyFilters(); renderStats();
+    });
+    if (sortSelect) sortSelect.addEventListener("change", e => {
+        sortMode = e.target.value;
+        applyFilters();
+    });
+    if (refreshButton) {
+        refreshButton.addEventListener("click", () => {
+            refreshButton.disabled = true;
+            loadPicks().finally(() => { refreshButton.disabled = false; });
+        });
+    }
+    // Modal kapatma
+    document.querySelectorAll("[data-close-modal]").forEach(el => {
+        el.addEventListener("click", closeDetail);
+    });
+    document.addEventListener("keydown", e => {
+        if (e.key === "Escape") closeDetail();
+    });
 }
 
+/* ========== PWA ========== */
+function registerSW() {
+    if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+}
 
-/* =====================================================
-   BAŞLAT
-===================================================== */
-
+/* ========== BAŞLAT ========== */
 document.addEventListener("DOMContentLoaded", () => {
     loadTheme();
     loadFavorites();
+    loadLang();
     updateFavCount();
+    bindEvents();
     loadPicks();
+    registerSW();
 });
