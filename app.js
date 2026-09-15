@@ -695,5 +695,3 @@ function registerSW() {
     }
 }
 
-
-});
