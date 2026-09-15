@@ -1,422 +1,155 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#080b14">
-
-    <meta name="description"
-          content="Günün ücretsiz maç tahminleri ve kuponları">
-
+    <meta name="description" content="Günün ücretsiz maç tahminleri ve kuponları">
     <title>Günün Ücretsiz Maç Kuponları</title>
-
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<!-- =====================================================
-     HEADER
-===================================================== -->
-
+<!-- HEADER -->
 <header class="header">
-
     <div class="header-container">
-
         <div class="logo-area">
-
-            <div class="logo-icon">
-                ⚽
-            </div>
-
+            <div class="logo-icon">⚽</div>
             <div class="logo-text">
-
-                <div class="logo-title">
-                    MAÇ KUPONLARI
-                </div>
-
-                <div class="logo-subtitle">
-                    ÜCRETSİZ MAÇ TAHMİNLERİ
-                </div>
-
+                <div class="logo-title">MAÇ KUPONLARI</div>
+                <div class="logo-subtitle">ÜCRETSİZ MAÇ TAHMİNLERİ</div>
             </div>
-
         </div>
 
+        <div class="header-actions">
+            <button id="themeToggle" class="icon-button" type="button" aria-label="Tema değiştir">
+                <span class="theme-icon">🌙</span>
+            </button>
 
-        <button id="refreshButton"
-                class="refresh-button"
-                type="button">
-
-            <span class="refresh-icon">↻</span>
-
-            YENİLE
-
-        </button>
-
+            <button id="refreshButton" class="refresh-button" type="button">
+                <span class="refresh-icon">↻</span>
+                YENİLE
+            </button>
+        </div>
     </div>
-
 </header>
 
 
-<!-- =====================================================
-     HERO
-===================================================== -->
-
+<!-- HERO -->
 <section class="hero">
-
     <div class="hero-container">
-
-        <div class="hero-badge">
-
-            🔥 GÜNÜN TAHMİNLERİ
-
-        </div>
-
-        <h1>
-
-            Günün Ücretsiz
-            <span>Maç Kuponları</span>
-
-        </h1>
-
-        <p>
-
-            Güncel maç tahminlerini,
-            oranları ve güven yüzdelerini
-            tek yerde görüntüle.
-
-        </p>
-
+        <div class="hero-badge">🔥 GÜNÜN TAHMİNLERİ</div>
+        <h1>Günün Ücretsiz <span>Maç Kuponları</span></h1>
+        <p>Güncel maç tahminlerini, oranları ve güven yüzdelerini tek yerde görüntüle.</p>
 
         <div class="hero-info">
-
             <div class="info-box">
-
-                <div class="info-icon">
-                    📅
-                </div>
-
+                <div class="info-icon">📅</div>
                 <div>
-
-                    <small>
-                        TARİH
-                    </small>
-
-                    <strong id="todayDate">
-                        -
-                    </strong>
-
+                    <small>TARİH</small>
+                    <strong id="todayDate">-</strong>
                 </div>
-
             </div>
-
-
             <div class="info-box">
-
-                <div class="info-icon">
-                    🔄
-                </div>
-
+                <div class="info-icon">🔄</div>
                 <div>
-
-                    <small>
-                        DURUM
-                    </small>
-
-                    <strong id="dataStatus">
-                        Yükleniyor...
-                    </strong>
-
+                    <small>DURUM</small>
+                    <strong id="dataStatus">Yükleniyor...</strong>
                 </div>
-
             </div>
-
-
             <div class="info-box">
-
-                <div class="info-icon">
-                    ⚽
-                </div>
-
+                <div class="info-icon">⚽</div>
                 <div>
-
-                    <small>
-                        TAHMİN
-                    </small>
-
-                    <strong id="matchCount">
-                        -
-                    </strong>
-
+                    <small>TAHMİN</small>
+                    <strong id="matchCount">-</strong>
                 </div>
-
             </div>
-
         </div>
-
     </div>
-
 </section>
 
 
-<!-- =====================================================
-     MAIN
-===================================================== -->
-
+<!-- MAIN -->
 <main class="main-container">
 
-
-    <!-- STATUS -->
-
     <div class="status-bar">
-
         <div class="status-left">
-
-            <span id="statusIndicator"
-                  class="status-indicator loading">
-
-            </span>
-
-            <span id="statusMessage">
-
-                Veriler yükleniyor...
-
-            </span>
-
+            <span id="statusIndicator" class="status-indicator loading"></span>
+            <span id="statusMessage">Veriler yükleniyor...</span>
         </div>
-
-
-        <div id="lastUpdate"
-             class="last-update">
-
-            -
-
-        </div>
-
+        <div id="lastUpdate" class="last-update">-</div>
     </div>
 
 
-    <!-- =================================================
-         FILTERS
-    ================================================== -->
-
+    <!-- FİLTRELER -->
     <div class="filter-section">
-
-        <button class="filter-button active"
-                data-filter="all"
-                type="button">
-
-            🏆 TÜMÜ
-
-        </button>
-
-
-        <button class="filter-button"
-                data-filter="banko"
-                type="button">
-
-            🔥 BANKO
-
-        </button>
-
-
-        <button class="filter-button"
-                data-filter="high"
-                type="button">
-
-            ⭐ %75+
-
-        </button>
-
-
-        <button class="filter-button"
-                data-filter="today"
-                type="button">
-
-            📅 BUGÜN
-
-        </button>
-
+        <button class="filter-button active" data-filter="all" type="button">🏆 TÜMÜ</button>
+        <button class="filter-button" data-filter="banko" type="button">🔥 BANKO</button>
+        <button class="filter-button" data-filter="high" type="button">⭐ %75+</button>
+        <button class="filter-button" data-filter="today" type="button">📅 BUGÜN</button>
+        <button class="filter-button" data-filter="favorites" type="button">❤️ FAVORİLER <span id="favCount" class="fav-count"></span></button>
     </div>
 
 
-    <!-- =================================================
-         SEARCH
-    ================================================== -->
-
+    <!-- ARAMA -->
     <div class="search-area">
-
         <div class="search-box">
-
-            <span class="search-icon">
-                🔎
-            </span>
-
-            <input
-                type="text"
-                id="searchInput"
-                placeholder="Takım veya lig ara..."
-                autocomplete="off">
-
+            <span class="search-icon">🔎</span>
+            <input type="text" id="searchInput" placeholder="Takım veya lig ara..." autocomplete="off">
         </div>
-
     </div>
 
 
-    <!-- =================================================
-         COUPON TITLE
-    ================================================== -->
-
+    <!-- BÖLÜM BAŞLIĞI -->
     <div class="section-title">
-
         <div>
-
-            <span class="section-icon">
-                🔥
-            </span>
-
-            <h2>
-                Günün Kuponları
-            </h2>
-
+            <span class="section-icon">🔥</span>
+            <h2>Günün Kuponları</h2>
         </div>
-
-
-        <span id="resultCount"
-              class="result-count">
-
-            0 MAÇ
-
-        </span>
-
+        <span id="resultCount" class="result-count">0 MAÇ</span>
     </div>
 
 
-    <!-- =================================================
-         MATCH CARDS
-    ================================================== -->
-
-    <section id="couponContainer"
-             class="coupon-grid">
-
-
-        <!-- LOADING -->
-
+    <!-- KARTLAR -->
+    <section id="couponContainer" class="coupon-grid">
         <div class="loading-card">
-
-            <div class="loading-spinner">
-                ⚽
-            </div>
-
-            <h3>
-                Kuponlar hazırlanıyor...
-            </h3>
-
-            <p>
-                Güncel tahminler kontrol ediliyor.
-            </p>
-
+            <div class="loading-spinner">⚽</div>
+            <h3>Kuponlar hazırlanıyor...</h3>
+            <p>Güncel tahminler kontrol ediliyor.</p>
         </div>
-
     </section>
 
 
-    <!-- =================================================
-         NO RESULTS
-    ================================================== -->
-
-    <div id="noResults"
-         class="no-results"
-         style="display:none;">
-
-        <div class="no-results-icon">
-            🔎
-        </div>
-
-        <h3>
-            Tahmin bulunamadı
-        </h3>
-
-        <p>
-            Arama veya filtre kriterlerini değiştirin.
-        </p>
-
+    <!-- NO RESULTS -->
+    <div id="noResults" class="no-results" style="display:none;">
+        <div class="no-results-icon">🔎</div>
+        <h3>Tahmin bulunamadı</h3>
+        <p>Arama veya filtre kriterlerini değiştirin.</p>
     </div>
 
 
-    <!-- =================================================
-         INFORMATION
-    ================================================== -->
-
+    <!-- BİLGİLENDİRME -->
     <section class="information">
-
-        <div class="information-icon">
-            ℹ️
-        </div>
-
+        <div class="information-icon">ℹ️</div>
         <div>
-
-            <h3>
-                Bilgilendirme
-            </h3>
-
-            <p>
-
-                Bu sayfa yalnızca maç tahminlerini
-                bilgilendirme amacıyla gösterir.
-                Tahminler kesin sonuç veya kazanç
-                garantisi değildir.
-
-            </p>
-
+            <h3>Bilgilendirme</h3>
+            <p>Bu sayfa yalnızca maç tahminlerini bilgilendirme amacıyla gösterir. Tahminler kesin sonuç veya kazanç garantisi değildir.</p>
         </div>
-
     </section>
-
 
 </main>
 
 
-<!-- =====================================================
-     FOOTER
-===================================================== -->
-
+<!-- FOOTER -->
 <footer class="footer">
-
     <div class="footer-container">
-
-        <div class="footer-logo">
-
-            ⚽ MAÇ KUPONLARI
-
-        </div>
-
-        <p>
-
-            Günlük ücretsiz maç tahminleri
-
-        </p>
-
+        <div class="footer-logo">⚽ MAÇ KUPONLARI</div>
+        <p>Günlük ücretsiz maç tahminleri</p>
         <div class="footer-line"></div>
-
-        <small>
-
-            © 2026 Maç Kuponları
-
-        </small>
-
+        <small>© 2026 Maç Kuponları</small>
     </div>
-
 </footer>
-
-
-<!-- =====================================================
-     JAVASCRIPT
-===================================================== -->
 
 <script src="app.js"></script>
 
