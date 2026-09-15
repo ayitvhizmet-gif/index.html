@@ -1,5 +1,6 @@
 /* =====================================================
    MAÇ KUPONLARI - APP.JS
+   api/picks.js (Vercel Serverless Function) ile uyumlu
 ===================================================== */
 
 "use strict";
@@ -56,9 +57,15 @@ function escapeHtml(str) {
         .replace(/'/g, "&#039;");
 }
 
-/* Tarihi gg.aa.yyyy biçimine çevirir */
+/* Tarih/saat biçimlendirme */
 function formatDate(value) {
     if (!value) return "";
+
+    /* Sadece saat gelirse (örn: "20:30") direkt göster */
+    if (/^\d{1,2}:\d{2}$/.test(String(value))) {
+        return String(value);
+    }
+
     const d = new Date(value);
     if (isNaN(d.getTime())) return String(value);
 
@@ -86,8 +93,9 @@ function statusInfo(status) {
 function confidenceStars(value) {
     let n = Number(value) || 0;
 
-    /* 10 üzerinden gelirse 5'e indir */
-    if (n > 5) n = Math.round(n / 2);
+    /* 10 veya 100 üzerinden gelirse 5'e indir */
+    if (n > 10) n = Math.round(n / 20);
+    else if (n > 5) n = Math.round(n / 2);
 
     n = Math.max(1, Math.min(5, n));
 
@@ -103,23 +111,32 @@ function createCard(pick) {
     const card = document.createElement("article");
     card.className = "coupon-card";
 
-    const status  = statusInfo(pick.status);
-    const stars   = confidenceStars(pick.confidence || pick.guven || 3);
-    const oran    = pick.odds || pick.oran || "-";
-    const tahmin  = pick.prediction || pick.tahmin || "";
-    const lig     = pick.league || pick.lig || "";
-    const ev      = pick.home || pick.evSahibi || "";
-    const dep     = pick.away || pick.deplasman || "";
-    const macSaati = formatDate(pick.date || pick.tarih || pick.matchDate);
-    const analiz  = pick.analysis || pick.analiz || pick.note || "";
-    const kategori = pick.category || pick.kategori || "genel";
+    const status   = statusInfo(pick.status);
+    const stars    = confidenceStars(pick.confidence || pick.guven || 3);
+    const oran     = pick.odds || pick.oran || "-";
+    const tahmin   = pick.pick || pick.prediction || pick.tahmin || "";
+    const lig      = pick.league || pick.lig || "";
+    const ev       = pick.home || pick.evSahibi || "";
+    const dep      = pick.away || pick.deplasman || "";
+    const macSaati = formatDate(pick.date || pick.tarih || pick.time || "");
+    const analiz   = pick.analysis || pick.analiz || pick.note || "";
+
+    /* Kategori: banko alanı geldiyse onu kullan, yoksa genel */
+    const kategori = pick.category || pick.kategori ||
+                     (pick.banko ? "banko" : "genel");
 
     card.dataset.category = normalize(kategori);
     card.dataset.status   = status.cls;
 
+    /* Banko etiketi */
+    const bankoBadge = pick.banko
+        ? `<span class="banko-badge">BANKO</span>`
+        : "";
+
     card.innerHTML = `
         <div class="card-top">
             <span class="league">${escapeHtml(lig)}</span>
+            ${bankoBadge}
             <span class="status ${status.cls}">${status.text}</span>
         </div>
 
@@ -162,7 +179,10 @@ function applyFilters() {
     filteredPicks = allPicks.filter((pick) => {
         /* Kategori filtresi */
         if (activeFilter !== "all") {
-            const kategori = normalize(pick.category || pick.kategori || "genel");
+            const kategori = normalize(
+                pick.category || pick.kategori ||
+                (pick.banko ? "banko" : "genel")
+            );
             if (kategori !== activeFilter) return false;
         }
 
@@ -172,7 +192,7 @@ function applyFilters() {
                 pick.league, pick.lig,
                 pick.home, pick.evSahibi,
                 pick.away, pick.deplasman,
-                pick.prediction, pick.tahmin,
+                pick.pick, pick.prediction, pick.tahmin,
                 pick.analysis, pick.analiz
             ].join(" "));
 
@@ -219,26 +239,36 @@ function render() {
 
 
 /* =====================================================
-   VERİ YÜKLEME
+   VERİ YÜKLEME  (api/picks.js'den veri çeker)
 ===================================================== */
 
 async function loadPicks() {
-    /* 1) data.js varsa onu kullan */
+    /* 1) data.js varsa (window.PICKS) onu kullan */
     if (Array.isArray(window.PICKS) && window.PICKS.length) {
         allPicks = window.PICKS;
         applyFilters();
         return;
     }
 
-    /* 2) picks.json dosyasını dene */
+    /* 2) api/picks.js (Vercel Serverless) üzerinden veriyi çek */
     try {
-        const res = await fetch("picks.json", { cache: "no-store" });
+        const res = await fetch("/api/picks", { cache: "no-store" });
+
         if (!res.ok) throw new Error("HTTP " + res.status);
 
         const data = await res.json();
-        allPicks = Array.isArray(data) ? data : (data.picks || []);
+
+        /* API çıktısı: { success, source, updated_at, count, picks: [...] } */
+        if (data && data.success === false) {
+            throw new Error(data.error || "API hata döndü");
+        }
+
+        allPicks = Array.isArray(data)
+            ? data
+            : (data.picks || []);
 
         applyFilters();
+
     } catch (err) {
         console.error("Kuponlar yüklenemedi:", err);
 
@@ -249,7 +279,7 @@ async function loadPicks() {
         if (noResults) {
             noResults.hidden = false;
             noResults.textContent =
-                "Kupon verisi yüklenemedi. picks.json dosyasını kontrol et.";
+                "Kupon verisi yüklenemedi. API çalışmıyor olabilir.";
         }
     } finally {
         if (loadingEl) loadingEl.hidden = true;
