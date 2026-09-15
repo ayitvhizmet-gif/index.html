@@ -695,13 +695,5 @@ function registerSW() {
     }
 }
 
-/* ========== BAŞLAT ========== */
-document.addEventListener("DOMContentLoaded", () => {
-    loadTheme();
-    loadFavorites();
-    loadLang();
-    updateFavCount();
-    bindEvents();
-    loadPicks();
-    registerSW();
+
 });
