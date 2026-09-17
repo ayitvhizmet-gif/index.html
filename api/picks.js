@@ -1,19 +1,18 @@
 /* =====================================================
-   ÇOKLU KAYNAKLI API - FOOTEO + BETBETTER
-   BetBetter: Kayıt/API anahtarı gerekmez (CC BY 4.0)
+   ÇOKLU KAYNAKLI API - FOOTEO + FDB4 (Kayıtsız, Ücretsiz)
 ===================================================== */
 
 const FOOTEO_URL = "https://footeoplay.com/tr/picks";
-const BETBETTER_BASE = "https://betbetter.world";
+const FDB4_BASE = "https://fdb4.io/api";
 
-// BetBetter'ın desteklediği futbol ligleri (doğrulanmış slug'lar)
-const BETBETTER_SOCCER_LEAGUES = [
-  "epl",
+// FDB4'ün desteklediği popüler ligler
+const FDB4_LEAGUES = [
+  "premier-league",
   "la-liga",
   "serie-a",
   "bundesliga",
   "ligue-1",
-  "world-cup"
+  "champions-league"
 ];
 
 export default async function handler(req, res) {
@@ -23,11 +22,11 @@ export default async function handler(req, res) {
 
   const results = await Promise.allSettled([
     fetchFooteo(),
-    fetchBetBetter()
+    fetchFDB4()
   ]);
 
   results.forEach((result, i) => {
-    const sourceName = ["footeo", "betbetter"][i];
+    const sourceName = ["footeo", "fdb4"][i];
     if (result.status === "fulfilled") {
       allPicks.push(...result.value);
       console.log(`✅ ${sourceName}: ${result.value.length} maç`);
@@ -44,7 +43,7 @@ export default async function handler(req, res) {
     count: unique.length,
     sources: {
       footeo: allPicks.filter(p => p.source === "footeo").length,
-      betbetter: allPicks.filter(p => p.source === "betbetter").length
+      fdb4: allPicks.filter(p => p.source === "fdb4").length
     },
     picks: unique
   });
@@ -52,7 +51,7 @@ export default async function handler(req, res) {
 
 
 /* =====================================================
-   1. FOOTEO PARSER (mevcut, çalışıyor)
+   1. FOOTEO PARSER (Mevcut, Çalışıyor)
 ===================================================== */
 
 async function fetchFooteo() {
@@ -126,16 +125,16 @@ function parseFooteo(html) {
 
 
 /* =====================================================
-   2. BETBETTER (Doğru endpoint - API anahtarı gerekmez)
+   2. FDB4 (Kayıtsız, Ücretsiz)
 ===================================================== */
 
-async function fetchBetBetter() {
+async function fetchFDB4() {
   const allPicks = [];
 
-  for (const league of BETBETTER_SOCCER_LEAGUES) {
+  for (const league of FDB4_LEAGUES) {
     try {
-      // Doğru endpoint: https://betbetter.world/{lig}/picks?format=json
-      const res = await fetch(`${BETBETTER_BASE}/${league}/picks?format=json`, {
+      // FDB4'ün halka açık API endpoint'i
+      const res = await fetch(`${FDB4_BASE}/leagues/${league}/predictions`, {
         headers: {
           "Accept": "application/json",
           "User-Agent": "Mozilla/5.0 (compatible; MacKuponlari/1.0)"
@@ -144,53 +143,45 @@ async function fetchBetBetter() {
       });
 
       if (!res.ok) {
-        console.warn(`BetBetter ${league}: HTTP ${res.status}`);
+        console.warn(`FDB4 ${league}: HTTP ${res.status}`);
         continue;
       }
 
       const data = await res.json();
-      const picks = data.picks || [];
+      const matches = data.matches || data.predictions || [];
 
-      picks.forEach(pick => {
-        // "game" alanı "Away @ Home" formatındadır
-        const game = pick.game || "";
-        let home = "", away = "";
-
-        if (game.includes("@")) {
-          const parts = game.split("@").map(s => s.trim());
-          away = parts[0] || "";
-          home = parts[1] || "";
-        }
-
+      matches.forEach(match => {
+        const home = match.homeTeam || match.home_team || "";
+        const away = match.awayTeam || match.away_team || "";
         if (!home || !away) return;
 
-        // Güven derecesini yüzdeye çevir
-        const confMap = { "HIGH": 85, "LEAN": 70, "LONG-SHOT": 55 };
-        const confidence = pick.modelProbabilityPct ||
-                          confMap[pick.confidence] || 55;
+        // Tahmin ve olasılık verileri
+        const prediction = match.prediction || match.pick || {};
+        const tip = prediction.outcome || prediction.tip || "";
+        const confidence = prediction.probability || prediction.confidence || 50;
 
         allPicks.push({
-          id: `betbetter_${league}_${home}_${away}`.replace(/[\s/]+/g, "_"),
-          source: "betbetter",
-          league: league.toUpperCase().replace("-", " "),
+          id: `fdb4_${league}_${home}_${away}`.replace(/[\s/]+/g, "_"),
+          source: "fdb4",
+          league: league.toUpperCase().replace(/-/g, " "),
           home: home,
           away: away,
-          homeLogo: "",
-          awayLogo: "",
-          time: pick.gameTimeUtc ? new Date(pick.gameTimeUtc).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : "",
-          kickoff: pick.gameTimeUtc || "",
-          tip: pick.selection || "",
-          odds: String(pick.fairOdds || ""),
+          homeLogo: match.homeLogo || "",
+          awayLogo: match.awayLogo || "",
+          time: match.matchTime || match.time || "",
+          kickoff: match.matchDate || match.kickoff || "",
+          tip: tip,
+          odds: String(prediction.odds || match.odds || ""),
           prob: Math.round(confidence),
           confidence: Math.round(confidence),
-          analysis: pick.verdict || `BetBetter model: ${pick.selection} (${pick.confidence})`,
-          isHero: pick.confidence === "HIGH",
+          analysis: `FDB4 model: ${tip} (${Math.round(confidence)}%)`,
+          isHero: confidence >= 80,
           today: true
         });
       });
 
     } catch (e) {
-      console.error(`BetBetter ${league} hatası:`, e.message);
+      console.error(`FDB4 ${league} hatası:`, e.message);
     }
   }
 
