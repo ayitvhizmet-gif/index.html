@@ -1,26 +1,23 @@
 /* =====================================================
-   ÇOKLU KAYNAKLI API - FOOTEO + BETBETTER (Kayıtsız)
+   ÇOKLU KAYNAKLI API - FOOTEO + FOREBET (Kayıtsız)
 ===================================================== */
 
 const FOOTEO_URL = "https://footeoplay.com/tr/picks";
-const BETBETTER_BASE = "https://api.betbetter.world/v1/picks/soccer";
-
-// Desteklenen büyük ligler (BetBetter lig kodları)
-const BETBETTER_LEAGUES = ["epl", "la-liga", "serie-a", "bundesliga", "ligue-1"];
+const FOREBET_URL = "https://www.forebet.com/tr/futbol-tahminleri-ve-istatistikler/bugun";
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store, max-age=0");
 
   const allPicks = [];
 
-  // Tüm kaynaklardan paralel veri çek
+  // İki kaynaktan paralel çek
   const results = await Promise.allSettled([
     fetchFooteo(),
-    fetchBetBetter()
+    fetchForebet()
   ]);
 
   results.forEach((result, i) => {
-    const sourceName = ["footeo", "betbetter"][i];
+    const sourceName = ["footeo", "forebet"][i];
     if (result.status === "fulfilled") {
       allPicks.push(...result.value);
       console.log(`✅ ${sourceName}: ${result.value.length} maç`);
@@ -29,7 +26,6 @@ export default async function handler(req, res) {
     }
   });
 
-  // Tekrarlanan maçları temizle
   const unique = removeDuplicates(allPicks);
 
   return res.status(200).json({
@@ -38,7 +34,7 @@ export default async function handler(req, res) {
     count: unique.length,
     sources: {
       footeo: allPicks.filter(p => p.source === "footeo").length,
-      betbetter: allPicks.filter(p => p.source === "betbetter").length
+      forebet: allPicks.filter(p => p.source === "forebet").length
     },
     picks: unique
   });
@@ -46,7 +42,7 @@ export default async function handler(req, res) {
 
 
 /* =====================================================
-   1. FOOTEO (mevcut parser)
+   1. FOOTEO PARSER
 ===================================================== */
 
 async function fetchFooteo() {
@@ -120,80 +116,188 @@ function parseFooteo(html) {
 
 
 /* =====================================================
-   2. BETBETTER (API anahtarı gerekmez)
+   2. FOREBET PARSER
 ===================================================== */
 
-async function fetchBetBetter() {
-  const allPicks = [];
+async function fetchForebet() {
+  const res = await fetch(FOREBET_URL, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "tr-TR,tr;q=0.9,en;q=0.8",
+      "Referer": "https://www.forebet.com/"
+    },
+    cache: "no-store"
+  });
 
-  for (const league of BETBETTER_LEAGUES) {
-    try {
-      const res = await fetch(`${BETBETTER_BASE}/${league}`, {
-        headers: {
-          "Accept": "application/json",
-          "User-Agent": "Mozilla/5.0 (compatible; MacKuponlari/1.0)"
-        },
-        cache: "no-store"
-      });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const html = await res.text();
+  return parseForebet(html);
+}
 
-      if (!res.ok) {
-        console.warn(`BetBetter ${league}: HTTP ${res.status}`);
-        continue;
-      }
+function parseForebet(html) {
+  const picks = [];
 
-      const data = await res.json();
-      const picks = data.picks || [];
+  // Maç satırlarını bul (Forebet her maçı <div class="rcnt"> veya <tr> içinde tutar)
+  // Satır bazlı yaklaşım: <div class="rcnt ..."> ... </div> veya <tr id="...">
+  // Her maç için: takım isimleri, lig, saat, tahmin (1/X/2), olasılık, oran
 
-      picks.forEach(pick => {
-        // "Game" alanı genelde "Team A vs Team B" formatındadır
-        const gameParts = (pick.game || "").split(" vs ");
-        const home = gameParts[0]?.trim() || "";
-        const away = gameParts[1]?.trim() || "";
+  // Basitleştirilmiş yaklaşım: tüm html'i satırlara ayır, maç bloklarını yakala
+  const rowRegex = /<div[^>]*class="[^"]*rcnt[^"]*"[^>]*data-[^>]*>([\s\S]*?)<\/div>\s*<\/div>/g;
 
-        // Güven derecesine göre yüzdelik güven puanı belirle
-        // HIGH: %85, LEAN: %70, LONG-SHOT: %55
-        const confMap = { "HIGH": 85, "LEAN": 70, "LONG-SHOT": 55 };
-        const confidence = confMap[pick.confidence] || 55;
+  // Alternatif: Forebet satır yapısı tablo şeklinde. <tr> etiketleri ile ayır.
+  const trRegex = /<tr[^>]*id="[^"]*"[^>]*>([\s\S]*?)<\/tr>/g;
+  let trMatch;
 
-        allPicks.push({
-          id: `betbetter_${pick.id || `${home}_${away}_${pick.selection}`}`,
-          source: "betbetter",
-          league: league.toUpperCase().replace("-", " "),
-          home: home,
-          away: away,
-          homeLogo: "",
-          awayLogo: "",
-          time: "", // BetBetter kickoff saati vermiyor
-          kickoff: pick.commence_time || "",
-          tip: pick.selection || "",
-          odds: String(pick.fairOdds || ""),
-          prob: confidence,
-          confidence: confidence,
-          analysis: `BetBetter model tahmini: ${pick.selection} (Güven: ${pick.confidence})`,
-          isHero: pick.confidence === "HIGH",
-          today: true
-        });
-      });
-
-    } catch (e) {
-      console.error(`BetBetter ${league} hatası:`, e.message);
-    }
+  while ((trMatch = trRegex.exec(html)) !== null) {
+    const row = trMatch[1];
+    const pick = parseForebetRow(row);
+    if (pick) picks.push(pick);
   }
 
-  return allPicks;
+  // Eğer tr ile bulamazsak, alternatif olarak JSON-LD veya script verisini dene
+  if (picks.length === 0) {
+    return parseForebetFallback(html);
+  }
+
+  return picks;
+}
+
+function parseForebetRow(row) {
+  try {
+    // Takım isimleri: <span class="homeTeam"> ve <span class="awayTeam"> veya <a> içinde
+    const homeMatch = row.match(/class="[^"]*homeTeam[^"]*"[^>]*>([^<]+)</) ||
+                      row.match(/class="[^"]*tnmscn[^"]*"[^>]*>[\s\S]*?<a[^>]*>([^<]+)<\/a>/);
+    const awayMatch = row.match(/class="[^"]*awayTeam[^"]*"[^>]*>([^<]+)</) ||
+                      row.match(/class="[^"]*tnmscn[^"]*"[^>]*>[\s\S]*?<\/a>[\s\S]*?<a[^>]*>([^<]+)<\/a>/);
+
+    if (!homeMatch || !awayMatch) return null;
+
+    const home = homeMatch[1].trim();
+    const away = awayMatch[1].trim();
+    if (!home || !away) return null;
+
+    // Lig
+    const leagueMatch = row.match(/class="[^"]*shortTag[^"]*"[^>]*>([^<]+)</) ||
+                        row.match(/title="([^"]+)"/);
+    const league = leagueMatch ? leagueMatch[1].trim() : "";
+
+    // Saat
+    const timeMatch = row.match(/(\d{1,2}:\d{2})/);
+    const time = timeMatch ? timeMatch[1] : "";
+
+    // Tahmin: <span class="forepr"> veya <div class="fprc">
+    const tipMatch = row.match(/class="[^"]*forepr[^"]*"[^>]*>([^<]+)</) ||
+                     row.match(/class="[^"]*fprc[^"]*"[^>]*>([^<]+)</);
+    let tip = tipMatch ? tipMatch[1].trim() : "";
+
+    // Tahmin tipini normalize et
+    tip = normalizeTip(tip);
+
+    // Olasılık: yüzde değerleri
+    const probMatches = row.match(/(\d{1,2})%/g);
+    let prob = 0;
+    if (probMatches && probMatches.length > 0) {
+      const probs = probMatches.map(p => parseInt(p));
+      prob = Math.max(...probs);
+    }
+
+    // Oran: <span class="forepr"> veya <div class="ex_td"> içindeki decimal
+    const oddsMatch = row.match(/(\d{1,2}\.\d{1,2})/);
+    const odds = oddsMatch ? oddsMatch[1] : "";
+
+    if (!home || !away || !tip) return null;
+
+    return {
+      id: `forebet_${home}_${away}_${time}`.replace(/\s+/g, "_"),
+      source: "forebet",
+      league: league || "Forebet",
+      home: home,
+      away: away,
+      homeLogo: "",
+      awayLogo: "",
+      time: time,
+      kickoff: "",
+      tip: tip,
+      odds: odds,
+      prob: prob,
+      confidence: prob,
+      analysis: `Forebet modeli: ${tip} (${prob}%)`,
+      isHero: prob >= 80,
+      today: true
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+function parseForebetFallback(html) {
+  // Forebet'in script içinde JSON verisi varsa onu dene
+  const picks = [];
+
+  // Forebet bazen maç verilerini JS değişkeninde tutar
+  const matchRegex = /homeTeam['"]?\s*[:=]\s*['"]([^'"]+)['"][\s\S]{0,500}?awayTeam['"]?\s*[:=]\s*['"]([^'"]+)['"]/g;
+  let match;
+
+  while ((match = matchRegex.exec(html)) !== null) {
+    picks.push({
+      id: `forebet_${match[1]}_${match[2]}`.replace(/\s+/g, "_"),
+      source: "forebet",
+      league: "Forebet",
+      home: match[1],
+      away: match[2],
+      homeLogo: "",
+      awayLogo: "",
+      time: "",
+      kickoff: "",
+      tip: "1",
+      odds: "",
+      prob: 50,
+      confidence: 50,
+      analysis: "Forebet tahmini",
+      isHero: false,
+      today: true
+    });
+  }
+
+  return picks;
+}
+
+function normalizeTip(tip) {
+  if (!tip) return "";
+  const t = tip.toLowerCase().trim();
+
+  if (t === "1" || t === "home" || t === "ev") return "Home";
+  if (t === "2" || t === "away" || t === "deplasman") return "Away";
+  if (t === "x" || t === "draw" || t === "beraberlik") return "Draw";
+  if (t === "1x" || t === "1 veya x") return "1X";
+  if (t === "x2" || t === "x veya 2") return "X2";
+  if (t === "12") return "12";
+  if (t.includes("over") || t.includes("üst")) return "Over 2.5";
+  if (t.includes("under") || t.includes("alt")) return "Under 2.5";
+  if (t.includes("btts") || t.includes("kg var")) return "BTTS";
+
+  return tip;
 }
 
 
 /* =====================================================
-   YARDIMCI: Tekrarları temizle
+   TEKRAR TEMİZLE
 ===================================================== */
 
 function removeDuplicates(picks) {
   const seen = new Set();
   return picks.filter(p => {
-    const key = `${p.home}|${p.away}|${p.tip}`.toLowerCase();
+    const key = `${normalize(p.home)}|${normalize(p.away)}|${p.tip}`.toLowerCase();
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+}
+
+function normalize(s) {
+  return String(s || "").toLowerCase()
+    .replace(/ı/g, "i").replace(/ş/g, "s").replace(/ğ/g, "g")
+    .replace(/ü/g, "u").replace(/ö/g, "o").replace(/ç/g, "c")
+    .replace(/[^a-z0-9]/g, "");
 }
