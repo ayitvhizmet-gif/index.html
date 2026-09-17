@@ -4,16 +4,16 @@
 ===================================================== */
 
 const FOOTEO_URL = "https://footeoplay.com/tr/picks";
-const BETBETTER_BASE = "https://betbetter.world/api/v1";
+const BETBETTER_BASE = "https://betbetter.world";
 
 // BetBetter'ın desteklediği futbol ligleri (doğrulanmış slug'lar)
 const BETBETTER_SOCCER_LEAGUES = [
-  "soccer/epl",
-  "soccer/la-liga",
-  "soccer/serie-a",
-  "soccer/bundesliga",
-  "soccer/ligue-1",
-  "soccer/world-cup"
+  "epl",
+  "la-liga",
+  "serie-a",
+  "bundesliga",
+  "ligue-1",
+  "world-cup"
 ];
 
 export default async function handler(req, res) {
@@ -126,7 +126,7 @@ function parseFooteo(html) {
 
 
 /* =====================================================
-   2. BETBETTER (Kayıt/API anahtarı yok, CC BY 4.0)
+   2. BETBETTER (Doğru endpoint - API anahtarı gerekmez)
 ===================================================== */
 
 async function fetchBetBetter() {
@@ -134,8 +134,8 @@ async function fetchBetBetter() {
 
   for (const league of BETBETTER_SOCCER_LEAGUES) {
     try {
-      // BetBetter open API endpoint'i
-      const res = await fetch(`${BETBETTER_BASE}/picks/${league}`, {
+      // Doğru endpoint: https://betbetter.world/{lig}/picks?format=json
+      const res = await fetch(`${BETBETTER_BASE}/${league}/picks?format=json`, {
         headers: {
           "Accept": "application/json",
           "User-Agent": "Mozilla/5.0 (compatible; MacKuponlari/1.0)"
@@ -149,21 +149,17 @@ async function fetchBetBetter() {
       }
 
       const data = await res.json();
-      const picks = data.picks || data.data || [];
+      const picks = data.picks || [];
 
       picks.forEach(pick => {
-        // "game" alanı genelde "Away @ Home" formatındadır
-        const game = pick.game || pick.fixture || "";
+        // "game" alanı "Away @ Home" formatındadır
+        const game = pick.game || "";
         let home = "", away = "";
 
         if (game.includes("@")) {
           const parts = game.split("@").map(s => s.trim());
           away = parts[0] || "";
           home = parts[1] || "";
-        } else if (game.includes(" vs ")) {
-          const parts = game.split(" vs ").map(s => s.trim());
-          home = parts[0] || "";
-          away = parts[1] || "";
         }
 
         if (!home || !away) return;
@@ -176,7 +172,7 @@ async function fetchBetBetter() {
         allPicks.push({
           id: `betbetter_${league}_${home}_${away}`.replace(/[\s/]+/g, "_"),
           source: "betbetter",
-          league: league.split("/")[1].toUpperCase().replace("-", " "),
+          league: league.toUpperCase().replace("-", " "),
           home: home,
           away: away,
           homeLogo: "",
